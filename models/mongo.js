@@ -8,7 +8,7 @@ mongoose.connect(uri).then(result=>{
     
 }).catch(error=>{
     console.log('could not connect to the database');
-    
+    process.exit(1)
 })
 
 const userschema = new mongoose.Schema({

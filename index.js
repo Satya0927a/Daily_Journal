@@ -210,6 +210,11 @@ const errorHandler = (error,req,res,next)=>{
 
 app.use(errorHandler)
 
+//to catch all errors
+app.use((req, res) => {
+    res.status(404).json({ message: "Unknown endpoint" });
+});
+
 const port = process.env.PORT || 3002
 app.listen(port, () => {
     console.log(`server listening in port ${port}`);
