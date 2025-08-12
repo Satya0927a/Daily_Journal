@@ -7,53 +7,61 @@ const todaysdate = new Date().toISOString().split('T')[0]
 app.use(express.json());
 
 app.use(express.static('dist'))
-//to authenticate user 
-app.get('/api/login/:name', (request, response) => {
+//*to authenticate user 
+app.get('/api/login/:name', (request, response,next) => {
     const name = request.params.name
+    if(!name || name.trim().toLowerCase() == "null" || name.trim().toLowerCase() == "undefined" || name == ""){
+        return response.status(400).json({message:"Username cannot be empty"})
+    }
+    // console.log(name);
+    
     users.findOne({ username: name }).then(result => {
         if (result) {
-            response.json({ authenticated: true , message: "successfully logged in"})
+            response.json({ authenticated: true , message: "Successfully logged in"})
         }
         else {
             response.status(404).json({
                 authenticated:false,
-                message:"This Username does not exist"
+                message:"This Username does not exist Click on create"
             })
         }
     }).catch(error => {
-        console.log(error);
-        response.status(500).json({
-            message:"error 500 server end problem"
-        })
+        next(error)
     })
 })
 
-//to create new user
-app.post('/api/create/:name', (request, response) => {
+//*to create new user
+app.post('/api/create/:name', (request, response,next) => {
     const name = request.params.name
+    // console.log(name);
     users.findOne({ username: name }).then(result => {
         if (!result) {
             const emptybody = {
                 username: name,
                 data: []
             }
+            // console.log(emptybody);
+            
             new users(emptybody).save().then(result => {
                 response.json({
                     authenticated:true,
                     message:"New user created and logged in successfully"
                 })
+            }).catch(error=>{
+                next(error)
             })
         }
         else{
             response.status(409).json({
-                error:"USER_ALREADY_EXISTS",
                 message:"This User already exists"
             })
         }
+    }).catch(error=>{
+        next(error)
     })
 })
 
-// //dev feature
+//? this is dev feature
 // app.get('/api/data', (request, response) => {
 //     users.find({}).then(Data => {
 //         if (Data) {
@@ -68,8 +76,8 @@ app.post('/api/create/:name', (request, response) => {
 //     })
 // })
 
-//to get data of user
-app.get('/api/data/:name', (request, response) => {
+//*to get data of user
+app.get('/api/data/:name', (request, response,next) => {
     const name = request.params.name
     users.findOne({ username: name }).then(data => {
         if (data) {
@@ -79,13 +87,12 @@ app.get('/api/data/:name', (request, response) => {
             response.status(404).end()
         }
     }).catch(error => {
-        console.log(error);
-        response.status(500).end()
+        next(error)
     })
 })
 
-//to add data to the user
-app.post('/api/data/:name', (request, response) => {
+//! Not being used: to add data to the user
+app.post('/api/data/:name', (request, response,next) => {
     const name = request.params.name
     const body = request.body
     const date = new Date().toISOString().split('T')[0]
@@ -98,13 +105,12 @@ app.post('/api/data/:name', (request, response) => {
         const lastentry = result.data[result.data.length - 1]
         response.send(lastentry)
     }).catch(error => {
-        console.log(error);
-        response.status(500).end()
+        next(error)
     })
 })
 
-//to update the goals section of the data when user set new goals or checks and unchecks
-app.post('/api/data/goals/:name',(request, response)=>{
+//*to update the goals section of the data when user set new goals or checks and unchecks
+app.post('/api/data/goals/:name',(request, response,next)=>{
     const name = request.params.name
     const body = request.body
 
@@ -125,6 +131,8 @@ app.post('/api/data/goals/:name',(request, response)=>{
 
             return users.updateOne({username:name},{"$push":{data:newdata}}).then(result=>{
                 response.json({message: "goals updated"})
+            }).catch(error=>{
+                next(error)
             })
         }
         // Update the goals for today's entry
@@ -135,23 +143,21 @@ app.post('/api/data/goals/:name',(request, response)=>{
         ).then(() => {
             response.json({ message: "Goals updated for today" });
         }).catch(error => {
-            console.log(error);
-            response.status(500).json({ message: "Server error" });
+            next(error)
         });
     }).catch(error => {
-        console.log(error);
-        response.status(500).json({ message: "Server error" });
+        next(error)
     });
 })
 
-//to set the journal of a user
-app.post('/api/data/journal/:name',(request,response)=>{
+//*to set the journal of a user
+app.post('/api/data/journal/:name',(request,response,next)=>{
     const name = request.params.name
     const journaldata = request.body.data
     
     users.findOne({username:name}).then(user=>{
         const todaysdataindex = user.data.findIndex(data_s=>data_s.date === todaysdate)
-        //if the days data is not created 
+        //*if the days data is not created 
         if(todaysdataindex == -1){
             const newdata = {
                 date:todaysdate,
@@ -164,6 +170,8 @@ app.post('/api/data/journal/:name',(request,response)=>{
                 {new:true}
             ).then((user)=>{
                 response.send(user.data.at(-1))
+            }).catch(error=>{
+                next(error)
             })
         }
         if(user.data[todaysdataindex].journal !== null){ 
@@ -172,7 +180,7 @@ app.post('/api/data/journal/:name',(request,response)=>{
         }
         
         // response.send(user.data[todaysdataindex])
-        //if the days data is created and the jornal is null it sets the journal
+        //*if the days data is created and the jornal is null it sets the journal
         const updatepath = `data.${todaysdataindex}.journal`
         users.findOneAndUpdate(
             {username:name},
@@ -180,10 +188,27 @@ app.post('/api/data/journal/:name',(request,response)=>{
             {new:true}
         ).then(user=>{
             response.send(user.data[todaysdataindex])
+        }).catch(error=>{
+            next(error)
         })
+    }).catch(error=>{
+        next(error)
     })
 
 })
+
+const errorHandler = (error,req,res,next)=>{
+    console.log(error);
+    if(error.name == "ValidationError"){
+        res.status(400).json({message:"Username cannot be empty or null,undefined"})
+    }
+    else{
+        res.status(500).json({message:"server side error"})
+
+    }
+}
+
+app.use(errorHandler)
 
 const port = process.env.PORT || 3002
 app.listen(port, () => {

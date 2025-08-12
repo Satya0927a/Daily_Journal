@@ -12,7 +12,15 @@ mongoose.connect(uri).then(result=>{
 })
 
 const userschema = new mongoose.Schema({
-    username:String,
+    username:{
+        type:String,
+        minLength:3,
+        required:true,
+        validate: {
+            validator: v => v && v.trim().toLowerCase() !== 'null' && v.trim().toLowerCase() !== 'undefined',
+            message: 'Username cannot be "null" or "undefined"'
+    }
+    },
     data:[
         {
             date:String,
