@@ -1,7 +1,8 @@
 const Userrouter = require('express').Router()
 const users = require('../models/mongo')
 
-const todaysdate = new Date().toISOString().split('T')[0]
+// const todaysdate = new Date().toISOString().split('T')[0]
+const todaysdate = new Date().toLocaleDateString('en-IN')
 
 //* to authenticate users
 Userrouter.get('/login/:name', (request, response,next) => {
@@ -168,8 +169,9 @@ Userrouter.post('/data/journal/:name',(request,response,next)=>{
                 next(error)
             })
         }
+        //*if journal is already set for the day
         if(user.data[todaysdataindex].journal !== null){ 
-            response.status(403).json({message:"jornal can only be changed once in a day"})
+            response.status(403).json({message:"journal can only be changed once in a day"})
             return
         }
         
