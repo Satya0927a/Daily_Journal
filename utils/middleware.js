@@ -1,5 +1,7 @@
+const { errorlog } = require("./logger");
+
 const errorHandler = (error,req,res,next)=>{
-    console.log(error);
+    errorlog(error);
     if(error.name == "ValidationError"){
         res.status(400).json({message:"Username cannot be empty or null,undefined"})
     }
