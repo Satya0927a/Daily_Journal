@@ -1,7 +1,8 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
+const { USERDATA_URI } = require('../utils/config');
 require('dotenv').config()
 
-const uri = process.env.USERDATA_URI
+const uri = USERDATA_URI
 
 mongoose.connect(uri).then(result=>{
     console.log('connected to the database successfully');
