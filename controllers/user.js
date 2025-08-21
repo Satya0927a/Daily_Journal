@@ -89,17 +89,6 @@ Userrouter.get('/data',authmiddlware ,async(request, response,next) => {
   } catch (error) {
     next(error)
   }
-  // const name = request.params.name
-  // users.findOne({ username: name }).then(data => {
-  //     if (data) {
-  //         response.json(data.data)
-  //     }
-  //     else {
-  //         response.status(404).end()
-  //     }
-  // }).catch(error => {
-  //     next(error)
-  // })
 })
 //! Not being used: to add data to the user
 Userrouter.post('/data/:name', (request, response,next) => {
@@ -118,15 +107,6 @@ Userrouter.post('/data/:name', (request, response,next) => {
         next(error)
     })
 })
-const gettoken = request=>{
-  const token = request.get('Authorization')
-  if(token && token.toLowerCase().startsWith("bearer ")){
-    return token.replace('Bearer ', "")
-  }
-  else{
-    return null
-  }
-}
 
 //*to update the goals section of the data when user set new goals or checks and unchecks
 Userrouter.post('/data/goals/update',authmiddlware,async(request, response,next)=>{
