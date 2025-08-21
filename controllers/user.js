@@ -1,77 +1,101 @@
 const Userrouter = require('express').Router()
 const users = require('../models/mongo')
-
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
 // const todaysdate = new Date().toISOString().split('T')[0]
 const todaysdate = new Date().toLocaleDateString('en-IN')
 
 //* to authenticate users
-Userrouter.get('/login/:name', (request, response,next) => {
-  
-    const name = request.params.name
-    if(!name || name.trim().toLowerCase() == "null" || name.trim().toLowerCase() == "undefined" || name == ""){
-        return response.status(400).json({message:"Username cannot be empty"})
-    }
-    // console.log(name);
-    
-    users.findOne({ username: name }).then(result => {
-        if (result) {
-            response.json({ authenticated: true , message: "Successfully logged in"})
-        }
-        else {
-            response.status(404).json({
-                authenticated:false,
-                message:"This Username does not exist Click on create"
-            })
-        }
-    }).catch(error => {
-        next(error)
+Userrouter.post('/login', async(request, response,next) => {
+  const {username,password} = request.body
+  if(!password || password.length < 3){
+    return response.status(400).json({
+      "success":false,
+      "error":"Invalid password"
     })
+  }
+  const user = await users.findOne({username:username})
+  const passwordcorrect = user === null ? false : await bcrypt.compare(password,user.passwordHash)
+  if(!user || !passwordcorrect){
+    return response.status(401).json({
+      "success":false,
+      "error":"User name or password is incorrect"
+    })
+  }
+  const tokenbody = {
+    username:user.username,
+    userid:user._id,
+  }
+  const createdtoken = jwt.sign(tokenbody,process.env.SECRET)
+  response.status(200).json({
+    "success":true,
+    "authenticated": true,
+    "message":"Successfully logged in",
+    "token":createdtoken,
+    "username":user.username
+  })
+
+
+    // const name = request.params.name
+    // if(!name || name.trim().toLowerCase() == "null" || name.trim().toLowerCase() == "undefined" || name == ""){
+    //     return response.status(400).json({message:"Username cannot be empty"})
+    // }
+    // // console.log(name);
+    
+    // users.findOne({ username: name }).then(result => {
+    //     if (result) {
+    //         response.json({ authenticated: true , message: "Successfully logged in"})
+    //     }
+    //     else {
+    //         response.status(404).json({
+    //             authenticated:false,
+    //             message:"This Username does not exist Click on create"
+    //         })
+    //     }
+    // }).catch(error => {
+    //     next(error)
+    // })
 })
 
 //*to create new user
-Userrouter.post('/create/:name', (request, response,next) => {
-    const name = request.params.name
-    // console.log(name);
-    users.findOne({ username: name }).then(result => {
-        if (!result) {
-            const emptybody = {
-                username: name,
-                data: []
-            }
-            // console.log(emptybody);
-            
-            new users(emptybody).save().then(result => {
-                response.json({
-                    authenticated:true,
-                    message:"New user created and logged in successfully"
-                })
-            }).catch(error=>{
-                next(error)
-            })
-        }
-        else{
-            response.status(409).json({
-                message:"This User already exists"
-            })
-        }
-    }).catch(error=>{
-        next(error)
+Userrouter.post('/create', async(request, response,next) => {
+  const {username,password} = request.body
+  if(!password || password.length < 3){
+    return response.status(400).json({
+      "success":false,
+      "error":"Invalid password"
     })
+  }
+  const pass_hash = await bcrypt.hash(password,10)
+  //saving the user
+  try {
+    await new users({
+      username:username,
+      passwordHash:pass_hash,
+    }).save()
+    response.status(200).json({
+      "success":true,
+      "authenticated":true,
+      "message":"New user created and logged in successfully"
+    })
+  } catch (error) {
+    next(error)
+  }
 })
 //? this is dev feature
-// Userrouter.get('/data', (request, response) => {
-//     users.find({}).then(Data => {
-//         if (Data) {
-//             response.json(Data)
-//         }
-//         else {
-//             response.status(404).end()
-//         }
-//     }).catch(error => {
-//         console.log(error);
-//         response.status(500).end()
-//     })
-// })
+Userrouter.get('/data', (request, response) => {
+    users.find({}).then(Data => {
+        if (Data) {
+            response.json(Data)
+        }
+        else {
+            response.status(404).end()
+        }
+    }).catch(error => {
+        console.log(error);
+        response.status(500).end()
+    })
+})
 //*to get data of user
 Userrouter.get('/data/:name', (request, response,next) => {
     const name = request.params.name

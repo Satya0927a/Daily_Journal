@@ -6,12 +6,12 @@ const { errorHandler, unknownEndpoints } = require('./utils/middleware')
 //user router import
 const Userrouter = require('./controllers/user')
 //config imports
-const { USERDATA_URI } = require('./utils/config')
+const {URI } = require('./utils/config')
 //logger imports
 const {errorlog, infolog } = require('./utils/logger')
 //connecting with the database
-mongoose.connect(USERDATA_URI).then(result=>{
-    infolog('connected to the database successfully');
+mongoose.connect(URI).then(result=>{
+    infolog(`connected to the ${process.env.NODE_ENV} database successfully`);
     
 }).catch(error=>{
     errorlog('couldnot connect to the database')
