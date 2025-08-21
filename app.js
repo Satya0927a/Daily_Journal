@@ -2,7 +2,7 @@ const express = require('express')
 const app = express()
 const mongoose = require('mongoose')
 //custom middleware imports
-const { errorHandler, unknownEndpoints } = require('./utils/middleware')
+const { errorHandler, unknownEndpoints, authmiddlware } = require('./utils/middleware')
 //user router import
 const Userrouter = require('./controllers/user')
 //config imports

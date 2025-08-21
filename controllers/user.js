@@ -3,6 +3,7 @@ const users = require('../models/mongo')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const { infolog } = require('../utils/logger')
+const { authmiddlware } = require('../utils/middleware')
 // const todaysdate = new Date().toISOString().split('T')[0]
 const todaysdate = new Date().toLocaleDateString('en-IN')
 
@@ -63,32 +64,42 @@ Userrouter.post('/create', async(request, response,next) => {
   }
 })
 //? this is dev feature
-Userrouter.get('/data', (request, response) => {
-    users.find({}).then(Data => {
-        if (Data) {
-            response.json(Data)
-        }
-        else {
-            response.status(404).end()
-        }
-    }).catch(error => {
-        console.log(error);
-        response.status(500).end()
-    })
-})
+// Userrouter.get('/data', (request, response) => {
+//     users.find({}).then(Data => {
+//         if (Data) {
+//             response.json(Data)
+//         }
+//         else {
+//             response.status(404).end()
+//         }
+//     }).catch(error => {
+//         console.log(error);
+//         response.status(500).end()
+//     })
+// })
 //*to get data of user
-Userrouter.get('/data/:name', (request, response,next) => {
-    const name = request.params.name
-    users.findOne({ username: name }).then(data => {
-        if (data) {
-            response.json(data.data)
-        }
-        else {
-            response.status(404).end()
-        }
-    }).catch(error => {
-        next(error)
-    })
+Userrouter.get('/data',authmiddlware ,async(request, response,next) => {
+  try {
+    const user = await users.findById(request.user.userid)
+    if(!user){
+      return response.status(404).json({success:false,error:"User not found"})
+    }
+    const userdata = user.data
+    response.json(userdata)
+  } catch (error) {
+    next(error)
+  }
+  // const name = request.params.name
+  // users.findOne({ username: name }).then(data => {
+  //     if (data) {
+  //         response.json(data.data)
+  //     }
+  //     else {
+  //         response.status(404).end()
+  //     }
+  // }).catch(error => {
+  //     next(error)
+  // })
 })
 //! Not being used: to add data to the user
 Userrouter.post('/data/:name', (request, response,next) => {
@@ -118,15 +129,10 @@ const gettoken = request=>{
 }
 
 //*to update the goals section of the data when user set new goals or checks and unchecks
-Userrouter.post('/data/goals/update',async(request, response,next)=>{
+Userrouter.post('/data/goals/update',authmiddlware,async(request, response,next)=>{
   try {
     const body = request.body
-    const payload = jwt.verify(gettoken(request),process.env.SECRET)
-    if(!payload){
-      return response.status(401).json({success:false,error:"authentication failed"})
-    }
-
-    const user = await users.findById(payload.userid)
+    const user = await users.findById(request.user.userid)
     if(!user){
       return response.status(404).json({success:false,error:"User not found"})
     }
@@ -144,6 +150,7 @@ Userrouter.post('/data/goals/update',async(request, response,next)=>{
       await user.save()
       return response.status(200).json({ success: true, message: "Goals updated for today" })
     }
+    //if todays data exists so update the goals
     user.data[entryindex].goals = {
       ...body
     }
@@ -155,51 +162,40 @@ Userrouter.post('/data/goals/update',async(request, response,next)=>{
   }
 })
 //*to set the journal of a user
-Userrouter.post('/data/journal/:name',(request,response,next)=>{
-    const name = request.params.name
-    const journaldata = request.body.data
+Userrouter.post('/data/journal/update',authmiddlware,async(request,response,next)=>{
+  try {
     
-    users.findOne({username:name}).then(user=>{
-        const todaysdataindex = user.data.findIndex(data_s=>data_s.date === todaysdate)
-        //*if the days data is not created 
-        if(todaysdataindex == -1){
-            const newdata = {
-                date:todaysdate,
-                journal: journaldata,
-                goals:null
-            }
-            return users.findOneAndUpdate(
-                {username:name},
-                {"$push":{data:newdata}},
-                {new:true}
-            ).then((user)=>{
-                response.send(user.data.at(-1))
-            }).catch(error=>{
-                next(error)
-            })
-        }
-        //*if journal is already set for the day
-        if(user.data[todaysdataindex].journal !== null){ 
-            response.status(403).json({message:"journal can only be changed once in a day"})
-            return
-        }
-        
-        // response.send(user.data[todaysdataindex])
-        //*if the days data is created and the jornal is null it sets the journal
-        const updatepath = `data.${todaysdataindex}.journal`
-        users.findOneAndUpdate(
-            {username:name},
-            {"$set":{[updatepath]:journaldata}},
-            {new:true}
-        ).then(user=>{
-            response.send(user.data[todaysdataindex])
-        }).catch(error=>{
-            next(error)
-        })
-    }).catch(error=>{
-        next(error)
-    })
-
+    const journaldata = request.body.data
+    if(!journaldata){
+      return response.status(400).send({success:false,error:"Invalid Journal input"})
+    }
+    const user = await users.findById(request.user.userid)
+    if(!user){
+      return response.status(404).send({success:false,error:"user not found"})
+    }
+    const todaysindex = user.data.findIndex(data=>data.date === todaysdate)
+    if(todaysindex === -1){
+      const newdata = {
+        date:todaysdate,
+        journal:journaldata,
+        goals:null
+      }
+      
+      user.data.push(newdata)
+    }
+    else{
+      if(!user.data[todaysindex].journal){
+      user.data[todaysindex].journal = journaldata
+    }
+    else{
+      return response.status(400).json({success:false,error:"You can only set the journal once in a day"})
+    }
+  }
+  await user.save()
+  response.status(200).json({success:true, message:"Added the journal of the day"})
+} catch (error) {
+  next(error)
+}
 })
 
 module.exports = Userrouter
