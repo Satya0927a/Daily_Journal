@@ -2,6 +2,7 @@ const Userrouter = require('express').Router()
 const users = require('../models/mongo')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
+const { infolog } = require('../utils/logger')
 // const todaysdate = new Date().toISOString().split('T')[0]
 const todaysdate = new Date().toLocaleDateString('en-IN')
 
@@ -34,27 +35,6 @@ Userrouter.post('/login', async(request, response,next) => {
     "token":createdtoken,
     "username":user.username
   })
-
-
-    // const name = request.params.name
-    // if(!name || name.trim().toLowerCase() == "null" || name.trim().toLowerCase() == "undefined" || name == ""){
-    //     return response.status(400).json({message:"Username cannot be empty"})
-    // }
-    // // console.log(name);
-    
-    // users.findOne({ username: name }).then(result => {
-    //     if (result) {
-    //         response.json({ authenticated: true , message: "Successfully logged in"})
-    //     }
-    //     else {
-    //         response.status(404).json({
-    //             authenticated:false,
-    //             message:"This Username does not exist Click on create"
-    //         })
-    //     }
-    // }).catch(error => {
-    //     next(error)
-    // })
 })
 
 //*to create new user
@@ -127,47 +107,52 @@ Userrouter.post('/data/:name', (request, response,next) => {
         next(error)
     })
 })
-
+const gettoken = request=>{
+  const token = request.get('Authorization')
+  if(token && token.toLowerCase().startsWith("bearer ")){
+    return token.replace('Bearer ', "")
+  }
+  else{
+    return null
+  }
+}
 
 //*to update the goals section of the data when user set new goals or checks and unchecks
-Userrouter.post('/data/goals/:name',(request, response,next)=>{
-    const name = request.params.name
+Userrouter.post('/data/goals/update',async(request, response,next)=>{
+  try {
     const body = request.body
+    const payload = jwt.verify(gettoken(request),process.env.SECRET)
+    if(!payload){
+      return response.status(401).json({success:false,error:"authentication failed"})
+    }
 
-    users.findOne({ username: name }).then(user => {
-        if (!user) {
-            return response.status(404).json({ message: "User not found" });
+    const user = await users.findById(payload.userid)
+    if(!user){
+      return response.status(404).json({success:false,error:"User not found"})
+    }
+    const entryindex = await user.data.findIndex(data => data.date === todaysdate)
+    //if todays data doesnt exists creates a new
+    if(entryindex === -1){
+      const newdata = {
+        date:todaysdate,
+        journal:null,
+        goals:{
+          ...body
         }
-        // Find the index of today's entry
-        const entryIndex = user.data.findIndex(entry => entry.date === todaysdate);
-        if (entryIndex === -1) {
-            const newdata = {
-                date:todaysdate,
-                journal:null,
-                goals:{
-                    ...body
-                }
-            }
+      }
+      user.data.push(newdata)
+      await user.save()
+      return response.status(200).json({ success: true, message: "Goals updated for today" })
+    }
+    user.data[entryindex].goals = {
+      ...body
+    }
+    await user.save()
+    return response.status(200).json({success:true, message:"Goals updated"})
 
-            return users.updateOne({username:name},{"$push":{data:newdata}}).then(result=>{
-                response.json({message: "goals updated"})
-            }).catch(error=>{
-                next(error)
-            })
-        }
-        // Update the goals for today's entry
-        const updatePath = `data.${entryIndex}.goals`;
-        users.updateOne(
-            { username: name },
-            { "$set": { [updatePath]: body } }
-        ).then(() => {
-            response.json({ message: "Goals updated for today" });
-        }).catch(error => {
-            next(error)
-        });
-    }).catch(error => {
-        next(error)
-    });
+  } catch (error) {
+    next(error)
+  }
 })
 //*to set the journal of a user
 Userrouter.post('/data/journal/:name',(request,response,next)=>{

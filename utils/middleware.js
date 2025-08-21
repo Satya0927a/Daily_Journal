@@ -8,6 +8,9 @@ const errorHandler = (error,req,res,next)=>{
     else if(error.name === 'MongoServerError'){
       res.status(400).json({success:false,error:"Username already exists"})
     }
+    else if(error.name === "JsonWebTokenError"){
+      res.status(400).json({success:false,error:"token missing or invalid"})
+    }
     else{
         res.status(500).json({message:"server side error"})
 
