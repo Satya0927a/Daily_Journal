@@ -70,19 +70,19 @@ Userrouter.post('/create', async (request, response, next) => {
   }
 })
 //? this is dev feature
-Userrouter.get('/data/all', (request, response) => {
-  users.find({}).then(Data => {
-    if (Data) {
-      response.json(Data)
-    }
-    else {
-      response.status(404).end()
-    }
-  }).catch(error => {
-    console.log(error);
-    response.status(500).end()
-  })
-})
+// Userrouter.get('/data/all', (request, response) => {
+//   users.find({}).then(Data => {
+//     if (Data) {
+//       response.json(Data)
+//     }
+//     else {
+//       response.status(404).end()
+//     }
+//   }).catch(error => {
+//     console.log(error);
+//     response.status(500).end()
+//   })
+// })
 //*to get data of user
 Userrouter.get('/data', authmiddlware, async (request, response, next) => {
   try {
