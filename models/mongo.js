@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 const userschema = new mongoose.Schema({
     username:{
         type:String,
-        minLength:[4,"Username must be more that 3 charecters"],
-        required:[true,"Username must be given"],
+        minLength:[4," must be more that 3 charecters"],
+        required:[true," must be given"],
         unique:true,
         validate: {
             validator: v => v && v.trim().toLowerCase() !== 'null' && v.trim().toLowerCase() !== 'undefined',

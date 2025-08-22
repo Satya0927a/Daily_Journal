@@ -3,16 +3,16 @@ const jwt = require('jsonwebtoken')
 const errorHandler = (error,req,res,next)=>{
     errorlog(error);
     if(error.name == "ValidationError"){
-        res.status(400).json(error.message)
+        res.status(400).json({success:false,error:error.message})
     }
     else if(error.name === 'MongoServerError'){
-      res.status(400).json({success:false,error:"Username already exists"})
+      res.status(400).json({success:false,error:"This Username is taken try another one"})
     }
     else if(error.name === "JsonWebTokenError"){
       res.status(400).json({success:false,error:"token missing or invalid"})
     }
     else{
-        res.status(500).json({message:"server side error"})
+        res.status(500).json({error:"500 server side error"})
 
     }
 }
