@@ -5,7 +5,9 @@ const jwt = require('jsonwebtoken')
 const { infolog } = require('../utils/logger')
 const { authmiddlware } = require('../utils/middleware')
 // const todaysdate = new Date().toISOString().split('T')[0]
-const todaysdate = new Date().toLocaleDateString('en-IN')
+const todaysdate = new Date().toLocaleDateString('en-IN',{
+  timeZone: "Asia/Kolkata",
+})
 
 //* to authenticate users
 Userrouter.post('/login', async (request, response, next) => {
