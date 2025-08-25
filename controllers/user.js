@@ -12,6 +12,7 @@ const todaysdate = new Date().toLocaleDateString('en-IN',{
 //* to authenticate users
 Userrouter.post('/login', async (request, response, next) => {
   const { username, password } = request.body
+  
   if (!username || !password || password.length < 3) {
     return response.status(400).json({
       "success": false,
